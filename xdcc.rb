@@ -62,7 +62,7 @@ class Helper
 end
 
 if (ARGV[0..2].compact.size < 3)
-	puts "Usage: ruby xdcc.rb <server> <bot_name> <file_number> [-c <channel_name>] [-d <download_folder>] [-o <bot_log_file>]"
+	puts "Usage: ruby xdcc.rb <server> <bot_name> <file_number> [-c <channel_name1>] [-c <channel_name2> ... ][-d <download_folder>] [-o <bot_log_file>]"
 	puts "Example: ruby xdcc.rb irc.rizon.net Cerebrate 321 -c horriblesubs -d '~/Downloads/' -o bot.log"
 	exit
 end
@@ -71,7 +71,7 @@ i = 0
 @@server = nil
 @@bot_name = nil
 @@file_number = nil
-@@channel_name = nil
+@@channel_names = []
 @@download_folder = nil
 @@log_file = nil
 
@@ -94,7 +94,7 @@ ARGV.delete_if {
 			end
 		elsif (x == "-c")
 			ARGV.shift
-			@@channel_name = ARGV.first
+			@@channel_names << ARGV.first
 		elsif (x == "-o")
 			ARGV.shift
 			@@log_file = File.expand_path(ARGV.first)
@@ -113,7 +113,7 @@ puts "Your parameters:"
 puts "*Server: #{@@server}"
 puts "*Bot name: #{@@bot_name}"
 puts "*Requested file: #{@@file_number}"
-puts "*Join channel: #{'#' if @@channel_name}#{@@channel_name || '<none>'}"
+puts "*Join channels: "+ @@channel_names.map{|c| "#{c}"} * ', ' if @@channel_names.any?
 puts "*Download folder: #{@@download_folder || 'here!'}"
 puts "*Bot log file: #{@@log_file || '<none>'}"
 puts "\n\n"
@@ -135,12 +135,12 @@ class XDCC
 	attr :bot, :bot_thread
 	attr_reader :handler
 
-	def initialize(server, optional_channel)
+	def initialize(server, optional_channels)
 		@bot = Cinch::Bot.new do
 			configure do |c|
 				c.server = server || "irc.rizon.net"
 				c.nick = "Guest"+Time.now.to_f.to_s.gsub(".", "")[10..-1]
-				c.channels = ["##{optional_channel}"] if optional_channel
+				c.channels = optional_channels.map{|c| "##{c}"} if optional_channels.any?
 				c.plugins.plugins = [XDCCHandler]
 			end
 		end
@@ -283,7 +283,7 @@ class XDCCHandler
 end
 
 begin
-	xdcc = XDCC.new(@@server, @@channel_name)
+	xdcc = XDCC.new(@@server, @@channel_names)
 	xdcc.handler.download_folder = @@download_folder
 	xdcc.handler.start_download(@@bot_name, @@file_number)
 
